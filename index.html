@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JSFiddle 4zjxsvqa</title>
+
+  <style>
+    
+  </style>
+
+  
+</head>
+<body>
+  <!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>单词学习与游戏</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      text-align: center;
+    }
+    h2 {
+      margin-top: 40px;
+    }
+    .grid {
+      display: grid;
+      gap: 10px;
+      margin: 20px auto;
+    }
+    /* 学习模式：4✖️4 网格 */
+    #learn-grid {
+      grid-template-columns: repeat(4, 1fr);
+      max-width: 600px;
+    }
+    .card {
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 10px;
+      background: #f9f9f9;
+      cursor: pointer;
+      user-select: none;
+    }
+    /* 消消乐：4✖️8 网格 */
+    #game-grid {
+      grid-template-columns: repeat(4, 1fr);
+      max-width: 600px;
+      min-height: 300px;
+    }
+    /* 匹配成功后隐藏，但保留位置 */
+    .matched {
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .hidden {
+      display: none;
+    }
+    button {
+      margin: 10px 5px;
+      padding: 8px 12px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .error-summary {
+      border: 1px solid #f00;
+      background: #ffecec;
+      padding: 10px;
+      margin: 10px auto;
+      max-width: 600px;
+      text-align: left;
+    }
+    /* 拼拼乐样式 */
+    #puzzle-area {
+      margin: 20px auto;
+      max-width: 600px;
+      text-align: center;
+    }
+    .puzzle-parts {
+      margin: 10px;
+    }
+    .puzzle-part {
+      display: inline-block;
+      border: 1px solid #333;
+      padding: 5px 10px;
+      margin: 5px;
+      background: #f0f0f0;
+      cursor: pointer;
+    }
+    .selected-part {
+      background: #d1ecf1;
+      border-color: #0c5460;
+      cursor: default;
+    }
+    #puzzle-message {
+      margin-top: 10px;
+      font-size: 16px;
+    }
+    #puzzle-counter {
+      margin-top: 10px;
+      font-size: 16px;
+    }
+    /* 单词听听乐界面 */
+    #listening-area {
+      margin: 20px auto;
+      max-width: 600px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+    /* 提示信息区域 */
+    #listening-info {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+    /* 选项区域 */
+    #options-area {
+      margin-top: 10px;
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+    .option-btn {
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    .speaker {
+      font-size: 24px;
+      cursor: pointer;
+      margin-bottom: 5px;
+    }
+    #listening-counter {
+      font-size: 16px;
+    }
+    .hidden-word {
+      color: transparent;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 学习模式 -->
+  <section id="learning-mode">
+    <h2>学习模式</h2>
+    <div id="learn-controls">
+      <button id="refresh-btn">刷新单词</button>
+      <button id="start-game-btn">开始游戏</button>
+      <button id="continue-game-btn" class="hidden">继续游戏</button>
+    </div>
+    <div id="learn-grid" class="grid">
+      <!-- 16张单词卡片通过JS填充 -->
+    </div>
+  </section>
+
+  <!-- 单词消消乐 -->
+  <section id="game-mode" class="hidden">
+    <h2>单词消消乐</h2>
+    <p id="game-instructions">请将英文和中文配对</p>
+    <div id="game-end-section" class="hidden">
+      <div class="error-summary" id="game-error-summary">
+        <strong>消消乐错误单词总结：</strong>
+        <div id="game-errors"></div>
+      </div>
+      <div id="game-end-buttons">
+        <button id="next-level-btn">进入下一关</button>
+      </div>
+    </div>
+    <div id="game-grid" class="grid"></div>
+    <div id="game-controls">
+    </div>
+  </section>
+
+  <!-- 单词拼拼乐 -->
+  <section id="puzzle-mode" class="hidden">
+    <h2>单词拼拼乐</h2>
+    <div id="puzzle-area"></div>
+    <div id="puzzle-message"></div>
+    <div id="puzzle-counter">已练习单词：0</div>
+    <div id="puzzle-end-section" class="hidden">
+      <div class="error-summary" id="puzzle-error-summary">
+        <strong>拼拼乐错误单词总结：</strong><br>
+        <div id="puzzle-errors"></div>
+      </div>
+      <div id="puzzle-end-buttons">
+        <button id="back-to-learn-btn3b">开启新一轮挑战</button>
+        <button id="continue-listening-btn">继续游戏</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 单词听听乐 -->
+  <section id="listening-mode" class="hidden">
+    <h2>单词听听乐</h2>
+    <p id="listening-instructions">请根据听到的录音和中文提示，选出正确的单词</p>
+    <div id="listening-area">
+      <div id="listening-info">
+        <button id="play-sound-btn" class="speaker">🔊</button>
+        <div id="hidden-word" class="hidden-word"></div>
+        <div id="listening-prompt"></div>
+      </div>
+      <div id="options-area"></div>
+    </div>
+    <div id="listening-counter">已练习单词：0</div>
+    <div id="listening-end-section" class="hidden">
+      <div class="error-summary" id="listening-error-summary">
+        <strong>听听乐错误单词总结：</strong><br>
+        <div id="listening-errors"></div>
+      </div>
+      <div>
+        <!-- 按钮直接内联 onclick 返回学习模式 -->
+        <button id="back-to-learn-btn4b" onclick="switchToLearnMode()">开启新一轮挑战</button>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    /***** 全局变量 *****/
+    // 全局单词列表（这里全部16个单词将用于本轮学习模式）
+    const wordList = [
+      {eng: "emotion and mood", cn: "感情和情绪"},
+      {eng: "westerner", cn: "西方人"},
+      {eng: "floor", cn: "地板"},
+      {eng: "initial", cn: "最初的，首字母"},
+      {eng: "initial migration", cn: "最初的迁徙"},
+      {eng: "scale", cn: "天平"},
+      {eng: "on small scale", cn: "小范围的"},
+      {eng: "sculpture", cn: "雕刻"},
+      {eng: "carve/engrave sth", cn: "雕刻东西"},
+      {eng: "serial", cn: "连续的"},
+      {eng: "a series of", cn: "一系列的"},
+      {eng: "TV series", cn: "电视连续剧"},
+      {eng: "network", cn: "网络"},
+      {eng: "badge", cn: "徽章"},
+      {eng: "name badge", cn: "写有名字的胸牌"},
+      {eng: "channel", cn: "海峡"},
+      {eng: "raw", cn: "生的"},
+      {eng: "raw material", cn: "原材料"},
+      {eng: "river", cn: "河"},
+      {eng: "self-defense", cn: "自卫"},
+      {eng: "stressful", cn: "压力的"},
+      {eng: "legal", cn: "合法的"},
+      {eng: "reinvest", cn: "重新投资"},
+      {eng: "little-known", cn: "无名的"},
+      {eng: "seating capacity", cn: "容纳观众人数"},
+      {eng: "cross passage", cn: "通道"},
+      {eng: "running tunnel", cn: "行车隧道"},
+      {eng: "filter", cn: "过滤"},
+      {eng: "rank", cn: "等级"},
+      {eng: "high rank", cn: "高级"},
+      {eng: "have high rank in geography", cn: "地理级别高"},
+      {eng: "non-active", cn: "不活跃的"},
+      {eng: "concentration", cn: "集中"},
+      {eng: "microchip", cn: "芯片"},
+      {eng: "automobile", cn: "汽车"},
+      {eng: "exposition", cn: "博览会"},
+      {eng: "World Expo=Exposition", cn: "世界博览会"},
+      {eng: "monitor", cn: "监视，监视器"},
+      {eng: "brick", cn: "砖"},
+      {eng: "flood", cn: "洪水"},
+      {eng: "suntan block", cn: "防晒"},
+      {eng: "altitude", cn: "高度"},
+      {eng: "drum", cn: "鼓"},
+      {eng: "concert", cn: "音乐会"},
+      {eng: "stretching", cn: "伸展的"},
+      {eng: "mat", cn: "脚垫"},
+      {eng: "petrol", cn: "汽油"},
+      {eng: "head office", cn: "总部"},
+      {eng: "computer programmer", cn: "电脑程序员"},
+      {eng: "traditional", cn: "传统的"},
+      {eng: "attitude", cn: "态度"},
+      {eng: "strict control", cn: "严格控制"},
+      {eng: "sector", cn: "部分"},
+      {eng: "digital system", cn: "数码系统"},
+      {eng: "preservation", cn: "保存"},
+      {eng: "fan", cn: "迷，粉丝，扇子"},
+      {eng: "radar", cn: "雷达"},
+      {eng: "storage space", cn: "存储空间"},
+      {eng: "calculating", cn: "算计的"},
+      {eng: "simulation", cn: "模拟"},
+      {eng: "litre", cn: "公升"},
+      {eng: "collection tank", cn: "储存罐"},
+      {eng: "decade", cn: "十年"},
+      {eng: "accountable", cn: "可数的"},
+      {eng: "private property", cn: "私人财产"},
+      {eng: "philosopher", cn: "哲学家"},
+      {eng: "corrupt", cn: "腐败的"},
+      {eng: "morality", cn: "道德"},
+      {eng: "ethic", cn: "道德"},
+      {eng: "business ethics", cn: "商业道德"},
+      {eng: "uncomfortable", cn: "不舒服的"},
+      {eng: "general election", cn: "大选，普选"},
+      {eng: "manufacture", cn: "生产"},
+      {eng: "evolution", cn: "进化"},
+      {eng: "reproduce", cn: "再生产"},
+      {eng: "layout", cn: "平面图"},
+      {eng: "double-grill", cn: "双格栅"},
+      {eng: "heat indicator", cn: "热度指示"},
+      {eng: "buried", cn: "埋藏的"},
+      {eng: "power company", cn: "供电公司"},
+      {eng: "battery", cn: "电池"},
+      {eng: "tide", cn: "潮水"},
+      {eng: "hearing", cn: "听觉"},
+      {eng: "moderate", cn: "中度的"},
+      {eng: "cost effective", cn: "性价比比较高"},
+      {eng: "shade", cn: "阴影"},
+      {eng: "climate", cn: "天气"},
+      {eng: "flooding", cn: "洪水"},
+      {eng: "improve", cn: "提高"},
+      {eng: "petrol", cn: "汽油"},
+      {eng: "petroleum", cn: "石油"},
+      {eng: "gasoline", cn: "石油（美）"},
+      {eng: "adequate", cn: "充足的"},
+      {eng: "soundproof", cn: "隔音的"},
+      {eng: "loss", cn: "损失"},
+      {eng: "pay for loss", cn: "补偿损失"},
+      {eng: "stuff", cn: "原料，东西"},
+      {eng: "resistance", cn: "抵抗"},
+      {eng: "resistance from parents", cn: "来自家长的反对"},
+      {eng: "authority", cn: "权威"},
+      {eng: "opportunity", cn: "机会"},
+      {eng: "mathematics", cn: "数学"},
+      {eng: "predictable", cn: "可预言的"},
+      {eng: "band", cn: "乐队"},
+      {eng: "banned", cn: "禁止"},
+      {eng: "replacement", cn: "替代"},
+      {eng: "replacement of jobs", cn: "换工作"},
+      {eng: "replacement policy", cn: "替代政策"},
+      {eng: "container", cn: "容器"},
+      {eng: "contain", cn: "包含"},
+      {eng: "margin", cn: "页边的空白"},
+      {eng: "wedding", cn: "婚礼"},
+      {eng: "wedding photos", cn: "婚礼照片"},
+      {eng: "satellite", cn: "卫星"},
+      {eng: "satellite TV station", cn: "卫星电视台"},
+      {eng: "assistance", cn: "援助"},
+      {eng: "reverse", cn: "相反的"},
+      {eng: "awful", cn: "可怕的"},
+      {eng: "awfully", cn: "十分，非常"},
+      {eng: "appeal", cn: "呼吁"},
+      {eng: "agriculture", cn: "农业"},
+      {eng: "oil", cn: "油"},
+      {eng: "oil explosion", cn: "石油爆炸"},
+      {eng: "food and oil", cn: "食物和油"},
+      {eng: "anger", cn: "愤怒"},
+      {eng: "pop", cn: "流行的"},
+      {eng: "pop test", cn: "抽考"},
+      {eng: "delay", cn: "耽搁"},
+      {eng: "Olympic", cn: "奥林匹克运动会的"},
+      {eng: "have strong hearts and lungs", cn: "心肺功能良好"},
+      {eng: "perfect", cn: "完美的"},
+      {eng: "suitable", cn: "合适的"},
+      {eng: "dial", cn: "拨号"},
+      {eng: "sting", cn: "刺"},
+      {eng: "scandal", cn: "丑闻"},
+      {eng: "sponsor", cn: "赞助者"},
+      {eng: "alternative", cn: "可选择的"},
+      {eng: "alternative energies", cn: "可替代能源"},
+      {eng: "uncomfortable", cn: "不舒服的"},
+      {eng: "relevant", cn: "相关的"},
+      {eng: "beautiful", cn: "美丽的"},
+      {eng: "chocolate", cn: "巧克力"},
+      {eng: "percent", cn: "百分比"},
+      {eng: "nurse", cn: "护士"},
+      {eng: "nursery", cn: "托儿所"},
+      {eng: "companion", cn: "同伴"},
+      {eng: "company", cn: "陪伴"},
+      {eng: "usage", cn: "使用"},
+      {eng: "strength", cn: "力量"},
+      {eng: "relief", cn: "减轻（痛苦）"},
+      {eng: "relieve", cn: "减轻"},
+      {eng: "hunt", cn: "打猎"},
+      {eng: "hunt for", cn: "寻找"},
+      {eng: "emperor", cn: "皇帝"},
+      {eng: "king", cn: "国王"},
+      {eng: "sign", cn: "标记"},
+      {eng: "mile", cn: "英里"},
+      {eng: "accuracy", cn: "准确度"},
+      {eng: "accurate", cn: "准确无误的"},
+      {eng: "inaccurate", cn: "不准确的"},
+      {eng: "precision", cn: "精密度"},
+      {eng: "appointment", cn: "预约"},
+      {eng: "pleasant", cn: "愉快的"},
+      {eng: "steering", cn: "操纵"},
+      {eng: "good steering", cn: "方便操纵"},
+      {eng: "website", cn: "网址"},
+      {eng: "influence", cn: "影响"},
+      {eng: "instruct", cn: "提示"},
+      {eng: "instruction", cn: "指示"},
+      {eng: "kilogram", cn: "公斤"},
+      {eng: "disposal", cn: "处理"},
+      {eng: "waste disposal", cn: "废物处理"},
+      {eng: "illegal", cn: "非法的"},
+      {eng: "mine", cn: "矿"},
+      {eng: "television", cn: "电视"},
+      {eng: "television drama", cn: "电视戏剧"},
+      {eng: "magnificent", cn: "华丽的"},
+      {eng: "seasoned", cn: "季节，风干"},
+      {eng: "measure", cn: "测量"},
+      {eng: "Drama", cn: "戏剧节"},
+      {eng: "beard", cn: "胡子"},
+      {eng: "moustache", cn: "上唇上的小胡子"},
+      {eng: "decline", cn: "下降"},
+      {eng: "shoplifter", cn: "顺手牵羊的人"},
+      {eng: "beauty", cn: "美女"},
+      {eng: "rider", cn: "骑手"},
+      {eng: "mood", cn: "情绪"},
+      {eng: "geographical", cn: "地理的价值"},
+      {eng: "mixture", cn: "混合物"},
+      {eng: "irritable", cn: "易怒的"},
+      {eng: "irritation", cn: "愤怒"},
+      {eng: "arrival", cn: "到达"},
+      {eng: "satisfaction", cn: "满意"},
+      {eng: "status", cn: "地位"},
+      {eng: "social status", cn: "社会地位"},
+      {eng: "stage", cn: "舞台，阶段"},
+      {eng: "permit", cn: "许可证"},
+      {eng: "permit required", cn: "查许可证"},
+      {eng: "discovery", cn: "发现"},
+      {eng: "parcel", cn: "包裹"},
+      {eng: "sufficient", cn: "充分的"},
+      {eng: "subjective", cn: "主观的"},
+      {eng: "objective", cn: "客观的"},
+      {eng: "page", cn: "页码"},
+      {eng: "usual", cn: "普通的"},
+      {eng: "latest", cn: "最新的"},
+      {eng: "development", cn: "发展"},
+      {eng: "rehearsal", cn: "演出，彩排"},
+      {eng: "dress rehearsal", cn: "彩排"},
+      {eng: "weapon", cn: "武器"},
+      {eng: "trade", cn: "贸易"},
+      {eng: "innovation", cn: "革新"},
+      {eng: "lava", cn: "火山岩"},
+      {eng: "theft", cn: "盗窃"},
+      {eng: "knowledge", cn: "知识"},
+      {eng: "curly", cn: "卷发的"},
+      {eng: "cotton", cn: "棉花"},
+      {eng: "mill", cn: "碾磨，磨细"},
+      {eng: "mill the grain on the ground", cn: "在地上把谷物磨细"},
+      {eng: "magic", cn: "魔术的"},
+      {eng: "magical", cn: "难以想象的，不可思议的"},
+      {eng: "magical animals", cn: "神奇的动物"},
+      {eng: "systematic", cn: "系统的"},
+      {eng: "work systematically", cn: "系统地工作"},
+      {eng: "shell", cn: "贝壳"},
+      {eng: "unique", cn: "独特的"},
+      {eng: "polish", cn: "抛光，擦亮"},
+      {eng: "cut and polished", cn: "经过切割和抛光的"},
+      {eng: "polish cars", cn: "汽车抛光"},
+      {eng: "knife", cn: "刀"},
+      {eng: "critical", cn: "批评的"},
+      {eng: "crucial", cn: "至关重要的，决定性的"},
+      {eng: "consumption", cn: "消费"},
+      {eng: "human consumption", cn: "人类消费"},
+      {eng: "crisis", cn: "危机"},
+      {eng: "belt", cn: "带子"},
+      {eng: "seat belt", cn: "安全带"},
+      {eng: "steady", cn: "稳定的"},
+      {eng: "remain steady", cn: "保持稳定"},
+      {eng: "deteriorate", cn: "恶化"},
+      {eng: "surface", cn: "表面"},
+      {eng: "seasoned", cn: "风干的"},
+      {eng: "wood should be cut and seasoned", cn: "木头要被砍下来，然后风干"},
+      {eng: "cupboard", cn: "橱柜"},
+      {eng: "inland", cn: "内陆"},
+      {eng: "inland region", cn: "内陆地区"},
+      {eng: "free", cn: "自由的"},
+      {eng: "freedom", cn: "自由"},
+      {eng: "response", cn: "回答"},
+      {eng: "answer", cn: "回答"},
+      {eng: "jewelry", cn: "珠宝"},
+      {eng: "journalist", cn: "记者"},
+      {eng: "repair", cn: "修理"},
+      {eng: "cage", cn: "笼子"},
+      {eng: "candle", cn: "蜡烛"},
+      {eng: "wax", cn: "蜡"},
+      {eng: "sensible", cn: "明智的"},
+      {eng: "sensible exercise", cn: "适当运动"},
+      {eng: "depression", cn: "沮丧"},
+      {eng: "layer", cn: "阶层"},
+      {eng: "ambiguous", cn: "有歧义的"},
+      {eng: "excuse", cn: "借口"},
+      {eng: "lessen", cn: "减轻"},
+      {eng: "layout", cn: "平面图"},
+      {eng: "reflectance", cn: "反射系数"},
+      {eng: "reserve", cn: "保留"},
+      {eng: "book in advance", cn: "预定"},
+      {eng: "genetic", cn: "遗传的"},
+      {eng: "import", cn: "进口"},
+      {eng: "tribute", cn: "贡品"},
+      {eng: "bridge", cn: "桥"},
+      {eng: "chat", cn: "聊天"},
+      {eng: "TV chat show", cn: "电视访谈"},
+      {eng: "strike", cn: "罢工"},
+      {eng: "basis", cn: "基础"},
+      {eng: "bases", cn: "底部，基地"},
+      {eng: "amazing", cn: "令人惊讶的"},
+      {eng: "reliable", cn: "可依赖的"},
+      {eng: "shelf", cn: "架子"},
+      {eng: "top shelf", cn: "最高的架子"},
+      {eng: "frequency", cn: "频率"},
+      {eng: "enhance", cn: "提高"}
+    ];
+    
+    // 当前这一轮学习模式的单词集合（16个），其它模式均基于此集合
+    let currentWords = [];
+    let gameCards = [];
+    let firstCard = null;
+    let errorWords = {};
+    let globalErrors = {};
+    let roundsSinceError = 0;
+    
+    let savedGameState = null;
+    let gamePaused = false;
+    
+    let puzzleIndex = 0;
+    let puzzleErrors = {};
+    let puzzleCount = 0;
+    
+    let listeningIndex = 0;
+    let listeningErrors = {};
+    let totalListening = 0;
+    
+    // 用于排除上一轮单词（刷新新一轮时使用）
+    let prevRoundWords = new Set();
+    
+    /***** 辅助函数 *****/
+    // 获取16个单词，新一轮生成时排除 prevRoundWords（除非允许最多3个错误单词保留）
+    function getRandomWords(n, excludeSet = new Set()) {
+      let result = [];
+      if (Object.keys(globalErrors).length === 0) {
+        let available = wordList.filter(w => !excludeSet.has(w.eng));
+        if (available.length < n) { available = wordList.slice(); }
+        available.sort(() => 0.5 - Math.random());
+        result = available.slice(0, n);
+      } else {
+        let errorArr = Object.keys(globalErrors);
+        errorArr.sort(() => 0.5 - Math.random());
+        let maxErrors = Math.min(3, errorArr.length);
+        let errorWordsArr = errorArr.slice(0, maxErrors).map(eng => {
+          return wordList.find(w => w.eng === eng) || {eng: eng, cn: globalErrors[eng]};
+        });
+        let errorSet = new Set(errorWordsArr.map(w => w.eng));
+        let available = wordList.filter(w => !excludeSet.has(w.eng) && !errorSet.has(w.eng));
+        available.sort(() => 0.5 - Math.random());
+        let remaining = n - errorWordsArr.length;
+        result = errorWordsArr.concat(available.slice(0, remaining));
+        result.sort(() => 0.5 - Math.random());
+      }
+      return result;
+    }
+    
+    function updateRoundsCount() {
+      if (Object.keys(globalErrors).length === 0) {
+        roundsSinceError++;
+      } else {
+        roundsSinceError = 0;
+      }
+    }
+    
+    function removeGlobalError(eng) {
+      if (globalErrors.hasOwnProperty(eng)) {
+        delete globalErrors[eng];
+      }
+    }
+    
+    /***** 学习模式 *****/
+    // 如果 force 为 true，则重新生成新一轮的单词
+    function renderLearnGrid(force = false) {
+      if (force || currentWords.length === 0) {
+        currentWords = getRandomWords(16, prevRoundWords);
+        updateRoundsCount();
+      }
+      const learnGrid = document.getElementById("learn-grid");
+      learnGrid.innerHTML = "";
+      currentWords.forEach(word => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `<strong>${word.eng}</strong><br>${word.cn}`;
+        learnGrid.appendChild(card);
+      });
+      // 更新 prevRoundWords：若全对则完全排除，否则允许最多3个错误单词保留
+      if (Object.keys(globalErrors).length === 0) {
+        prevRoundWords = new Set(currentWords.map(w => w.eng));
+      } else {
+        let allowed = new Set(Object.keys(globalErrors).slice(0, Math.min(3, Object.keys(globalErrors).length)));
+        prevRoundWords = new Set(currentWords.map(w => w.eng).filter(eng => !allowed.has(eng)));
+      }
+      document.getElementById("continue-game-btn").classList.toggle("hidden", !savedGameState);
+    }
+    
+    /***** 单词消消乐 *****/
+    function renderGameGrid() {
+      const gameGrid = document.getElementById("game-grid");
+      gameGrid.innerHTML = "";
+      if (savedGameState) {
+        gameCards = savedGameState;
+      } else {
+        gameCards = [];
+        currentWords.forEach(word => {
+          gameCards.push({eng: word.eng, cn: word.cn, type: "eng", matched: false});
+          gameCards.push({eng: word.eng, cn: word.cn, type: "cn", matched: false});
+        });
+        gameCards.sort(() => 0.5 - Math.random());
+      }
+      gameCards.forEach((cardData, index) => {
+        const card = document.createElement("div");
+        card.className = "card";
+        if (cardData.matched) { card.classList.add("matched"); }
+        card.dataset.index = index;
+        card.dataset.eng = cardData.eng;
+        card.dataset.cn = cardData.cn;
+        card.dataset.type = cardData.type;
+        card.innerHTML = (cardData.type === "eng" ? cardData.eng : cardData.cn);
+        card.addEventListener("click", () => handleCardClick(card));
+        gameGrid.appendChild(card);
+      });
+    }
+    
+    function handleCardClick(card) {
+      if (!firstCard) {
+        firstCard = card;
+        card.style.borderColor = "#007bff";
+      } else {
+        if (card === firstCard) return;
+        if (firstCard.dataset.eng === card.dataset.eng && firstCard.dataset.type !== card.dataset.type) {
+          const idx1 = parseInt(firstCard.dataset.index, 10);
+          const idx2 = parseInt(card.dataset.index, 10);
+          gameCards[idx1].matched = true;
+          gameCards[idx2].matched = true;
+          removeGlobalError(firstCard.dataset.eng);
+          firstCard.classList.add("matched");
+          card.classList.add("matched");
+          firstCard = null;
+          checkGameCompletion();
+        } else {
+          errorWords[firstCard.dataset.eng] = firstCard.dataset.cn;
+          errorWords[card.dataset.eng] = card.dataset.cn;
+          globalErrors[firstCard.dataset.eng] = firstCard.dataset.cn;
+          globalErrors[card.dataset.eng] = card.dataset.cn;
+          firstCard.style.borderColor = "#dc3545";
+          card.style.borderColor = "#dc3545";
+          setTimeout(() => {
+            if (firstCard) firstCard.style.borderColor = "#ccc";
+            card.style.borderColor = "#ccc";
+            firstCard = null;
+          }, 500);
+        }
+      }
+    }
+    
+    function checkGameCompletion() {
+      const allMatched = gameCards.every(c => c.matched);
+      if (allMatched) {
+        savedGameState = gameCards;
+        showGameEndSection();
+      }
+    }
+    
+    function showGameEndSection() {
+      document.getElementById("game-instructions").classList.add("hidden");
+      const errorDiv = document.getElementById("game-errors");
+      errorDiv.innerHTML = "";
+      if (Object.keys(errorWords).length === 0) {
+        errorDiv.innerHTML = "Congratulations！请继续游戏～";
+      } else {
+        for (let eng in errorWords) {
+          errorDiv.innerHTML += `${eng} - ${errorWords[eng]}<br>`;
+        }
+      }
+      document.getElementById("game-end-section").classList.remove("hidden");
+      document.getElementById("game-controls").style.display = "none";
+      document.getElementById("next-level-btn").onclick = () => {
+        document.getElementById("game-mode").classList.add("hidden");
+        document.getElementById("puzzle-mode").classList.remove("hidden");
+        puzzleIndex = 0;
+        puzzleErrors = {};
+        puzzleCount = 0;
+        document.getElementById("puzzle-message").textContent = "";
+        document.getElementById("puzzle-counter").textContent = "已练习单词：0";
+        document.getElementById("puzzle-counter").style.display = "block";
+        document.getElementById("puzzle-end-section").classList.add("hidden");
+        renderPuzzle();
+      };
+    }
+    
+    /***** 单词拼拼乐 *****/
+    function splitWord(word) {
+      let parts = [];
+      if (word.length <= 4) {
+        parts = word.split('');
+      } else if (word.length <= 6) {
+        const mid = Math.floor(word.length / 2);
+        parts.push(word.slice(0, mid));
+        parts.push(word.slice(mid));
+      } else {
+        parts.push(word.slice(0, 2));
+        parts.push(word.slice(2, word.length - 2));
+        parts.push(word.slice(word.length - 2));
+      }
+      return parts;
+    }
+    
+    function renderPuzzle() {
+      const puzzleArea = document.getElementById("puzzle-area");
+      puzzleArea.innerHTML = "";
+      if (puzzleIndex >= currentWords.length) {
+        showPuzzleEndSection();
+        return;
+      }
+      const currentWord = currentWords[puzzleIndex];
+      const parts = splitWord(currentWord.eng);
+      parts.sort(() => 0.5 - Math.random());
+      const instruction = document.createElement("p");
+      instruction.textContent = `请根据中文提示，拼出单词（中文提示：${currentWord.cn}）`;
+      puzzleArea.appendChild(instruction);
+      
+      const answerDiv = document.createElement("div");
+      answerDiv.id = "puzzle-answer";
+      answerDiv.style.minHeight = "30px";
+      answerDiv.style.margin = "10px";
+      puzzleArea.appendChild(answerDiv);
+      
+      const partsDiv = document.createElement("div");
+      partsDiv.className = "puzzle-parts";
+      parts.forEach(part => {
+        const partBtn = document.createElement("button");
+        partBtn.className = "puzzle-part";
+        partBtn.textContent = part;
+        partBtn.addEventListener("click", () => {
+          const span = document.createElement("span");
+          span.textContent = part;
+          span.style.marginRight = "5px";
+          answerDiv.appendChild(span);
+          partBtn.disabled = true;
+          partBtn.classList.add("selected-part");
+          if (answerDiv.childNodes.length === parts.length) {
+            let assembled = "";
+            answerDiv.childNodes.forEach(node => assembled += node.textContent);
+            const msgDiv = document.getElementById("puzzle-message");
+            if (assembled === currentWord.eng) {
+              msgDiv.textContent = "正确";
+              msgDiv.style.color = "green";
+              removeGlobalError(currentWord.eng);
+            } else {
+              msgDiv.textContent = "错误";
+              msgDiv.style.color = "red";
+              puzzleErrors[currentWord.eng] = currentWord.cn;
+              globalErrors[currentWord.eng] = currentWord.cn;
+            }
+            puzzleCount++;
+            document.getElementById("puzzle-counter").textContent = `已练习单词：${puzzleCount}`;
+            setTimeout(() => {
+              msgDiv.textContent = "";
+              puzzleIndex++;
+              renderPuzzle();
+            }, 1000);
+          }
+        });
+        partsDiv.appendChild(partBtn);
+      });
+      puzzleArea.appendChild(partsDiv);
+      document.getElementById("puzzle-counter").textContent = `已练习单词：${puzzleCount}`;
+      document.getElementById("puzzle-counter").style.display = "block";
+    }
+    
+    function showPuzzleEndSection() {
+      document.getElementById("puzzle-counter").style.display = "none";
+      const puzzleErrorsDiv = document.getElementById("puzzle-errors");
+      let html = "";
+      if (Object.keys(puzzleErrors).length === 0) {
+        html = "拼写全部正确，再接再厉！";
+      } else {
+        for (let eng in puzzleErrors) {
+          html += `${eng} - ${puzzleErrors[eng]}<br>`;
+        }
+      }
+      puzzleErrorsDiv.innerHTML = html;
+      document.getElementById("puzzle-end-section").classList.remove("hidden");
+      document.getElementById("back-to-learn-btn3b").onclick = switchToLearnMode;
+      document.getElementById("continue-listening-btn").onclick = () => {
+        document.getElementById("puzzle-mode").classList.add("hidden");
+        document.getElementById("listening-mode").classList.remove("hidden");
+        listeningIndex = 0;
+        totalListening = 0;
+        listeningErrors = {};
+        document.getElementById("listening-end-section").classList.add("hidden");
+        document.getElementById("listening-counter").textContent = "已练习单词：0";
+        renderListening();
+      };
+    }
+    
+    /***** 单词听听乐 *****/
+    function speakWord(word) {
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(word);
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+    
+    function getSimilarWord(word) {
+      if (word.length < 3) return word;
+      const index = Math.floor(Math.random() * word.length);
+      let similar = word.slice(0, index) + word.slice(index + 1);
+      if (similar === word) similar = word + "a";
+      return similar;
+    }
+    
+    function renderListening() {
+      const listeningArea = document.getElementById("listening-area");
+      listeningArea.innerHTML = "";
+      if (listeningIndex >= currentWords.length) {
+        showListeningEndSection();
+        return;
+      }
+      const currentWord = currentWords[listeningIndex];
+      
+      // 信息区域：显示喇叭、隐藏单词、中文提示（保持显示）
+      const infoDiv = document.createElement("div");
+      infoDiv.id = "listening-info";
+      infoDiv.style.display = "flex";
+      infoDiv.style.flexDirection = "column";
+      infoDiv.style.alignItems = "center";
+      infoDiv.style.gap = "5px";
+      
+      const speakerBtn = document.createElement("button");
+      speakerBtn.className = "speaker";
+      speakerBtn.textContent = "🔊";
+      speakerBtn.onclick = () => { speakWord(currentWord.eng); };
+      infoDiv.appendChild(speakerBtn);
+      
+      const hiddenWordDiv = document.createElement("div");
+      hiddenWordDiv.className = "hidden-word";
+      hiddenWordDiv.textContent = currentWord.eng;
+      infoDiv.appendChild(hiddenWordDiv);
+      
+      const promptDiv = document.createElement("div");
+      promptDiv.id = "listening-instructions";
+      promptDiv.textContent = `中文提示：${currentWord.cn}`;
+      infoDiv.appendChild(promptDiv);
+      
+      listeningArea.appendChild(infoDiv);
+      
+      // 选项区域：生成两个按钮，随机排列
+      const optionsArea = document.createElement("div");
+      optionsArea.id = "options-area";
+      optionsArea.style.marginTop = "10px";
+      
+      const correctBtn = document.createElement("button");
+      correctBtn.className = "option-btn";
+      correctBtn.textContent = currentWord.eng;
+      correctBtn.onclick = () => {
+        correctBtn.style.backgroundColor = "#d4edda";
+        removeGlobalError(currentWord.eng);
+        listeningIndex++;
+        totalListening++;
+        document.getElementById("listening-counter").textContent = `已练习单词：${totalListening}`;
+        setTimeout(renderListening, 800);
+      };
+      
+      const similarBtn = document.createElement("button");
+      similarBtn.className = "option-btn";
+      const sim = getSimilarWord(currentWord.eng);
+      similarBtn.textContent = sim;
+      similarBtn.onclick = () => {
+        similarBtn.style.backgroundColor = "#f8d7da";
+        listeningErrors[currentWord.eng] = currentWord.cn;
+        globalErrors[currentWord.eng] = currentWord.cn;
+        listeningIndex++;
+        totalListening++;
+        document.getElementById("listening-counter").textContent = `已练习单词：${totalListening}`;
+        setTimeout(renderListening, 800);
+      };
+      
+      // 将两个按钮随机排列
+      let btnArray = [correctBtn, similarBtn];
+      btnArray.sort(() => 0.5 - Math.random());
+      btnArray.forEach(btn => optionsArea.appendChild(btn));
+      
+      listeningArea.appendChild(optionsArea);
+      
+      document.getElementById("listening-counter").textContent = `已练习单词：${totalListening}`;
+      document.getElementById("listening-counter").style.display = "block";
+    }
+    
+    function showListeningEndSection() {
+      const listeningErrorsDiv = document.getElementById("listening-errors");
+      let html = "";
+      if (Object.keys(listeningErrors).length === 0) {
+        html = "听辨完全正确，请开始新一轮挑战～";
+      } else {
+        for (let eng in listeningErrors) {
+          html += `${eng} - ${listeningErrors[eng]}<br>`;
+        }
+      }
+      listeningErrorsDiv.innerHTML = html;
+      document.getElementById("listening-end-section").classList.remove("hidden");
+      // 隐藏提示和计数区域，让错误总结占位
+      document.getElementById("listening-instructions").style.display = "none";
+      document.getElementById("listening-counter").style.display = "none";
+    }
+    
+    /***** 页面切换 *****/
+    function switchToLearnMode() {
+      // 清空本轮所有状态，返回学习模式并刷新新单词
+      savedGameState = null;
+      gamePaused = false;
+      currentWords = [];
+      errorWords = {};
+      globalErrors = {};
+      puzzleIndex = 0;
+      puzzleErrors = {};
+      puzzleCount = 0;
+      listeningIndex = 0;
+      listeningErrors = {};
+      totalListening = 0;
+      document.getElementById("learning-mode").classList.remove("hidden");
+      document.getElementById("game-mode").classList.add("hidden");
+      document.getElementById("puzzle-mode").classList.add("hidden");
+      document.getElementById("listening-mode").classList.add("hidden");
+      renderLearnGrid(true);
+    }
+    
+    /***** 事件绑定 *****/
+    document.addEventListener("DOMContentLoaded", () => {
+      // 默认加载学习模式，显示16张单词卡片
+      renderLearnGrid(true);
+    });
+    document.getElementById("refresh-btn").addEventListener("click", () => renderLearnGrid(true));
+    document.getElementById("start-game-btn").addEventListener("click", () => {
+      gamePaused = false;
+      errorWords = {};
+      savedGameState = null;
+      document.getElementById("learning-mode").classList.add("hidden");
+      document.getElementById("game-mode").classList.remove("hidden");
+      document.getElementById("game-instructions").classList.remove("hidden");
+      document.getElementById("game-end-section").classList.add("hidden");
+      document.getElementById("game-controls").style.display = "block";
+      renderGameGrid();
+    });
+    document.getElementById("continue-game-btn").addEventListener("click", () => {
+      document.getElementById("learning-mode").classList.add("hidden");
+      document.getElementById("game-mode").classList.remove("hidden");
+      renderGameGrid();
+    });
+    document.getElementById("back-to-learn-btn").addEventListener("click", switchToLearnMode);
+    document.getElementById("back-to-learn-btn2").addEventListener("click", switchToLearnMode);
+    document.getElementById("back-to-learn-btn3b").addEventListener("click", switchToLearnMode);
+    // “开启新一轮挑战”按钮在听听乐中已用 inline onclick 调用 switchToLearnMode()
+    
+    document.getElementById("next-level-btn").onclick = () => {
+      document.getElementById("game-mode").classList.add("hidden");
+      document.getElementById("puzzle-mode").classList.remove("hidden");
+      puzzleIndex = 0;
+      puzzleErrors = {};
+      puzzleCount = 0;
+      document.getElementById("puzzle-message").textContent = "";
+      document.getElementById("puzzle-counter").textContent = "已练习单词：0";
+      document.getElementById("puzzle-counter").style.display = "block";
+      document.getElementById("puzzle-end-section").classList.add("hidden");
+      renderPuzzle();
+    };
+    
+    document.getElementById("continue-listening-btn").addEventListener("click", () => {
+      document.getElementById("puzzle-mode").classList.add("hidden");
+      document.getElementById("listening-mode").classList.remove("hidden");
+      listeningIndex = 0;
+      totalListening = 0;
+      listeningErrors = {};
+      document.getElementById("listening-end-section").classList.add("hidden");
+      document.getElementById("listening-counter").textContent = "已练习单词：0";
+      document.getElementById("listening-counter").style.display = "block";
+      document.getElementById("listening-instructions").style.display = "block";
+      renderListening();
+    });
+  </script>
+</body>
+</html>
+
+
+  <script>
+    
+  </script>
+</body>
+</html>
