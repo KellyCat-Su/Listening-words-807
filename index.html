@@ -1,29 +1,15 @@
 <!DOCTYPE html>
-<html>
-
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>JSFiddle 4zjxsvqa</title>
-
-  <style>
-    
-  </style>
-
-  
-</head>
-<body>
-  <!DOCTYPE html>
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
   <title>单词学习与游戏</title>
   <style>
     body {
+      background-color: #D6E5D1; /* 淡蓝背景 */
       font-family: Arial, sans-serif;
       margin: 20px;
       text-align: center;
+      color: #3E2723;
     }
     h2 {
       margin-top: 40px;
@@ -39,12 +25,18 @@
       max-width: 600px;
     }
     .card {
-      border: 1px solid #ccc;
+      border: 1px solid #F5ECD9;
       border-radius: 5px;
       padding: 10px;
-      background: #f9f9f9;
+      background: #FFFDE7;
       cursor: pointer;
       user-select: none;
+      transition: border 0.3s;
+    }
+    /* 选中时添加高亮边框 */
+    .selected-card {
+      border-color: #FCD5B4;
+      background: #FFE8D6;
     }
     /* 消消乐：4✖️8 网格 */
     #game-grid {
@@ -52,7 +44,7 @@
       max-width: 600px;
       min-height: 300px;
     }
-    /* 匹配成功后隐藏，但保留位置 */
+    /* 匹配成功后隐藏，但保持位置 */
     .matched {
       visibility: hidden;
       pointer-events: none;
@@ -65,10 +57,16 @@
       padding: 8px 12px;
       font-size: 14px;
       cursor: pointer;
+      background-color: #FFE8D6;
+      border: black;
+      border-radius: 5px;
     }
+    button:hover {
+      background: #FCD5B4;
+       }
     .error-summary {
-      border: 1px solid #f00;
-      background: #ffecec;
+      border: 1px solid #F5ECD9;
+      background-color: #FFFDE7;
       padding: 10px;
       margin: 10px auto;
       max-width: 600px;
@@ -88,11 +86,12 @@
       border: 1px solid #333;
       padding: 5px 10px;
       margin: 5px;
-      background: #f0f0f0;
+      background: #FFE8D6;
       cursor: pointer;
+      font-size: 15px;
     }
     .selected-part {
-      background: #d1ecf1;
+      background: #FFE8D6;
       border-color: #0c5460;
       cursor: default;
     }
@@ -104,7 +103,7 @@
       margin-top: 10px;
       font-size: 16px;
     }
-    /* 单词听听乐界面 */
+    /* 单词听听乐样式 */
     #listening-area {
       margin: 20px auto;
       max-width: 600px;
@@ -113,14 +112,12 @@
       align-items: center;
       gap: 5px;
     }
-    /* 提示信息区域 */
     #listening-info {
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 5px;
     }
-    /* 选项区域 */
     #options-area {
       margin-top: 10px;
       display: flex;
@@ -132,6 +129,7 @@
     .option-btn {
       padding: 8px 12px;
       cursor: pointer;
+      font-size: 15px;
     }
     .speaker {
       font-size: 24px;
@@ -155,7 +153,7 @@
     <div id="learn-controls">
       <button id="refresh-btn">刷新单词</button>
       <button id="start-game-btn">开始游戏</button>
-      <button id="continue-game-btn" class="hidden">继续游戏</button>
+      <!-- 已移除“继续游戏”按钮 -->
     </div>
     <div id="learn-grid" class="grid">
       <!-- 16张单词卡片通过JS填充 -->
@@ -177,7 +175,6 @@
     </div>
     <div id="game-grid" class="grid"></div>
     <div id="game-controls">
-    </div>
   </section>
 
   <!-- 单词拼拼乐 -->
@@ -217,7 +214,7 @@
         <div id="listening-errors"></div>
       </div>
       <div>
-        <!-- 按钮直接内联 onclick 返回学习模式 -->
+        <!-- “开启新一轮挑战”按钮 -->
         <button id="back-to-learn-btn4b" onclick="switchToLearnMode()">开启新一轮挑战</button>
       </div>
     </div>
@@ -225,8 +222,8 @@
 
   <script>
     /***** 全局变量 *****/
-    // 全局单词列表（这里全部16个单词将用于本轮学习模式）
-    const wordList = [
+    // 全局单词列表（完整16个单词集合）
+    const wordList = [   
       {eng: "emotion and mood", cn: "感情和情绪"},
       {eng: "westerner", cn: "西方人"},
       {eng: "floor", cn: "地板"},
@@ -245,7 +242,6 @@
       {eng: "channel", cn: "海峡"},
       {eng: "raw", cn: "生的"},
       {eng: "raw material", cn: "原材料"},
-      {eng: "river", cn: "河"},
       {eng: "self-defense", cn: "自卫"},
       {eng: "stressful", cn: "压力的"},
       {eng: "legal", cn: "合法的"},
@@ -511,7 +507,7 @@
       {eng: "enhance", cn: "提高"}
     ];
     
-    // 当前这一轮学习模式的单词集合（16个），其它模式均基于此集合
+    // 当前这一轮学习模式使用的单词集合，其他模式均基于此
     let currentWords = [];
     let gameCards = [];
     let firstCard = null;
@@ -530,11 +526,11 @@
     let listeningErrors = {};
     let totalListening = 0;
     
-    // 用于排除上一轮单词（刷新新一轮时使用）
+    // 用于刷新新一轮时排除上一轮单词（可选）
     let prevRoundWords = new Set();
     
     /***** 辅助函数 *****/
-    // 获取16个单词，新一轮生成时排除 prevRoundWords（除非允许最多3个错误单词保留）
+    // 获取16个单词，新一轮生成时排除 prevRoundWords（允许最多保留3个错误单词）
     function getRandomWords(n, excludeSet = new Set()) {
       let result = [];
       if (Object.keys(globalErrors).length === 0) {
@@ -574,7 +570,7 @@
     }
     
     /***** 学习模式 *****/
-    // 如果 force 为 true，则重新生成新一轮的单词
+    // 如果 force 为 true，则重新生成一轮单词，否则如果 currentWords 非空保持不变
     function renderLearnGrid(force = false) {
       if (force || currentWords.length === 0) {
         currentWords = getRandomWords(16, prevRoundWords);
@@ -582,10 +578,15 @@
       }
       const learnGrid = document.getElementById("learn-grid");
       learnGrid.innerHTML = "";
-      currentWords.forEach(word => {
+      currentWords.forEach((word, index) => {
         const card = document.createElement("div");
         card.className = "card";
+        card.dataset.index = index;
         card.innerHTML = `<strong>${word.eng}</strong><br>${word.cn}`;
+        // 添加点击事件，切换选中状态
+        card.addEventListener("click", function() {
+          card.classList.toggle("selected-card");
+        });
         learnGrid.appendChild(card);
       });
       // 更新 prevRoundWords：若全对则完全排除，否则允许最多3个错误单词保留
@@ -595,7 +596,29 @@
         let allowed = new Set(Object.keys(globalErrors).slice(0, Math.min(3, Object.keys(globalErrors).length)));
         prevRoundWords = new Set(currentWords.map(w => w.eng).filter(eng => !allowed.has(eng)));
       }
-      document.getElementById("continue-game-btn").classList.toggle("hidden", !savedGameState);
+    }
+    
+    // 刷新单词：如果有选中的卡片，则只刷新这些，否则刷新全部
+    function refreshSelectedWords() {
+      const selectedCards = document.querySelectorAll("#learn-grid .card.selected-card");
+      if (selectedCards.length === 0) {
+        // 无选中，则刷新全部
+        renderLearnGrid(true);
+      } else {
+        selectedCards.forEach(card => {
+          const index = parseInt(card.dataset.index, 10);
+          // 排除当前其他单词
+          const otherWords = currentWords.filter((w, i) => i !== index).map(w => w.eng);
+          let available = wordList.filter(w => !otherWords.includes(w.eng));
+          available.sort(() => 0.5 - Math.random());
+          const newWord = available[0];
+          // 更新全局 currentWords
+          currentWords[index] = newWord;
+          // 更新卡片内容，并取消选中状态
+          card.innerHTML = `<strong>${newWord.eng}</strong><br>${newWord.cn}`;
+          card.classList.remove("selected-card");
+        });
+      }
     }
     
     /***** 单词消消乐 *****/
@@ -778,7 +801,7 @@
       const puzzleErrorsDiv = document.getElementById("puzzle-errors");
       let html = "";
       if (Object.keys(puzzleErrors).length === 0) {
-        html = "拼写全部正确，再接再厉！";
+        html = "拼写全部正确，再接再厉～";
       } else {
         for (let eng in puzzleErrors) {
           html += `${eng} - ${puzzleErrors[eng]}<br>`;
@@ -824,7 +847,7 @@
       }
       const currentWord = currentWords[listeningIndex];
       
-      // 信息区域：显示喇叭、隐藏单词、中文提示（保持显示）
+      // 信息区域：显示提示（保持不变）
       const infoDiv = document.createElement("div");
       infoDiv.id = "listening-info";
       infoDiv.style.display = "flex";
@@ -850,7 +873,7 @@
       
       listeningArea.appendChild(infoDiv);
       
-      // 选项区域：生成两个按钮，随机排列
+      // 选项区域：生成两个随机排列按钮
       const optionsArea = document.createElement("div");
       optionsArea.id = "options-area";
       optionsArea.style.marginTop = "10px";
@@ -881,7 +904,6 @@
         setTimeout(renderListening, 800);
       };
       
-      // 将两个按钮随机排列
       let btnArray = [correctBtn, similarBtn];
       btnArray.sort(() => 0.5 - Math.random());
       btnArray.forEach(btn => optionsArea.appendChild(btn));
@@ -896,7 +918,7 @@
       const listeningErrorsDiv = document.getElementById("listening-errors");
       let html = "";
       if (Object.keys(listeningErrors).length === 0) {
-        html = "听辨完全正确，请开始新一轮挑战～";
+        html = "听辨完全正确，请开始新一轮挑战！";
       } else {
         for (let eng in listeningErrors) {
           html += `${eng} - ${listeningErrors[eng]}<br>`;
@@ -904,14 +926,14 @@
       }
       listeningErrorsDiv.innerHTML = html;
       document.getElementById("listening-end-section").classList.remove("hidden");
-      // 隐藏提示和计数区域，让错误总结占位
+      // 隐藏提示和计数区域
       document.getElementById("listening-instructions").style.display = "none";
       document.getElementById("listening-counter").style.display = "none";
     }
     
     /***** 页面切换 *****/
     function switchToLearnMode() {
-      // 清空本轮所有状态，返回学习模式并刷新新单词
+      // 返回学习模式：清空本轮状态并刷新新单词
       savedGameState = null;
       gamePaused = false;
       currentWords = [];
@@ -932,10 +954,13 @@
     
     /***** 事件绑定 *****/
     document.addEventListener("DOMContentLoaded", () => {
-      // 默认加载学习模式，显示16张单词卡片
+      // 默认显示学习模式及16张卡片
       renderLearnGrid(true);
     });
-    document.getElementById("refresh-btn").addEventListener("click", () => renderLearnGrid(true));
+    document.getElementById("refresh-btn").addEventListener("click", () => {
+      // 刷新按钮：刷新选中卡片，如果无选中则刷新所有
+      refreshSelectedWords();
+    });
     document.getElementById("start-game-btn").addEventListener("click", () => {
       gamePaused = false;
       errorWords = {};
@@ -947,15 +972,11 @@
       document.getElementById("game-controls").style.display = "block";
       renderGameGrid();
     });
-    document.getElementById("continue-game-btn").addEventListener("click", () => {
-      document.getElementById("learning-mode").classList.add("hidden");
-      document.getElementById("game-mode").classList.remove("hidden");
-      renderGameGrid();
-    });
+    // 已移除“继续游戏”按钮事件
     document.getElementById("back-to-learn-btn").addEventListener("click", switchToLearnMode);
     document.getElementById("back-to-learn-btn2").addEventListener("click", switchToLearnMode);
     document.getElementById("back-to-learn-btn3b").addEventListener("click", switchToLearnMode);
-    // “开启新一轮挑战”按钮在听听乐中已用 inline onclick 调用 switchToLearnMode()
+    // “开启新一轮挑战”按钮在听听乐结束区域已用 inline onclick 调用 switchToLearnMode()
     
     document.getElementById("next-level-btn").onclick = () => {
       document.getElementById("game-mode").classList.add("hidden");
@@ -982,13 +1003,6 @@
       document.getElementById("listening-instructions").style.display = "block";
       renderListening();
     });
-  </script>
-</body>
-</html>
-
-
-  <script>
-    
   </script>
 </body>
 </html>
